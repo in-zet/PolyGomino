@@ -12,10 +12,6 @@ import time
 import copy
 
 
-def board_calculate():
-    pass
-
-
 def block_turn_right():
     global current_block_shape, current_block_position
     if current_block_shape:
@@ -146,7 +142,7 @@ def block_drop():
     turn += 1
 
 
-def block_delete_check() -> list|False:
+def block_delete_check() -> list | bool:
     global board
     block_delete_target = []
     target_tmp = []
@@ -321,30 +317,60 @@ def block_unload():
     current_block_shape = []
 
 
-def selection_display():
-    
-
-def onboard_display():
+def ministone_draw():
     pass
 
 
+def pos(tileset_position: list | int, sprite_type: int = 0):
+    # sprite type // 0: x4 1: stone 2: selection 3: card 4: score 5: turn
+
+    if sprite_type == 0:
+        return [tileset_position[0] * 4, tileset_position[1] * 4]
+    elif sprite_type == 1:
+        return [4 * 17 * tileset_position[1], 4 * 17 * tileset_position[0]]
+    elif sprite_type == 2:
+        return [4 * 17 * tileset_position[1], 4 * 17 * tileset_position[0]]
+    elif sprite_type == 3:
+        return [4 * 34 * tileset_position, 0]
+    elif sprite_type == 4:
+        return [4 * 8 * tileset_position, 0]
+    elif sprite_type == 5:
+        return [4 * 8 * tileset_position, 15]
+
+
 class AnimatedSprite:
-    def __init__(self, size: tuple[int, int]):
+    def __init__(self, size: tuple[int, int], init_pos: tuple, *directorys):
+
         self.size = size
         self.images = dict()
         self.queue = []
+        self.init_pos = init_pos
 
-    def add_animation(self, directory: str, name: str):
-        file_list = sorted(list(filter(os.path.isfile, os.listdir(directory))))
+        for directory in directorys:
+            temp_file_list = list(filter(os.path.isfile, [f'{directory}\\{i}' for i in os.listdir(directory)]))
+            folder_list = list(filter(os.path.isdir, [f'{directory}\\{i}' for i in os.listdir(directory)]))
+            for i in temp_file_list:
+                self.images[i.split("\\")[-1].split(".")[0]] = pygame.image.load(i).convert_alpha()
+
+            for i in folder_list:
+                temp_file_list = sorted(list(filter(os.path.isfile, [f'{i}\\{j}' for j in os.listdir(i)])))
+                self.images[i.split("\\")[-1]] = [pygame.image.load(j).convert_alpha() for j in temp_file_list]
+
+    # def add_animation(self, directory: str, name: str):
+    #     file_list = sorted(list(filter(os.path.isfile, os.listdir(directory))))
+    #     self.images[name] \
+    #         = [pygame.image.load(f'{directory}\\{file_list[i]}').convert_alpha() for i in range(len(file_list))]
+    #
+    # def add_images(self, directory: str):
+    #     file_list = list(filter(os.path.isfile, os.listdir(directory)))
+    #     for i in file_list:
+    #         self.images[i.split(".")[0]] = pygame.image.load(f'{directory}\\{i}').convert_alpha()
+
+    def add_positioned_animation(self, target_image: str, name: str, position: list[list, int]):
         self.images[name] \
-            = [pygame.image.load(f'{directory}\\{file_list[i]}').convert_alpha() for i in range(len(file_list))]
+            = position + [self.images[target_image], "PA"]
 
-    def add_images(self, directory: str):
-        file_list = list(filter(os.path.isfile, os.listdir(directory)))
-        for i in file_list:
-            self.images[i.split(".")[0]] = pygame.image.load(f'{directory}\\{i}').convert_alpha()
-
-    def event_call(self, current_event: str, duration: int, next_event: str, position: tuple[int, int]):
+    def event_call(self, current_event: str, duration: int, next_event: str, position: list[int, int]):
         self.queue.append([current_event, duration, next_event, position])
 
     def event_check(self):
@@ -358,17 +384,30 @@ class AnimatedSprite:
                         self.queue[i][0] = self.queue[i][2]
                         self.queue[i][2] = None
 
-    def event_delete(self):
-        self.queue = []
+    # def event_delete(self):
+    #     self.queue = []
 
     def draw(self):
         for i in self.queue:
             temp_target = self.images[i[0]]
+
             if isinstance(temp_target, list):
-                screen.blit(temp_target[len(temp_target) - (i[1] + animation_delay - 1) // animation_delay],
-                            i[3])
+
+                if temp_target[-1] == "PA":
+                    animation_number = len(temp_target) - 2 - (i[1] + animation_delay - 1) // animation_delay
+                    temp_position = tuple([pos(self.init_pos[j] + pos(i[3])[j] + temp_target[animation_number])
+                                           for j in range(2)])
+
+                    screen.blit(temp_target[-2], temp_position)
+
+                else:
+                    animation_number = len(temp_target) - (i[1] + animation_delay - 1) // animation_delay
+                    temp_position = tuple([pos(self.init_pos[j] + pos(i[3])[j]) for j in range(2)])
+
+                    screen.blit(temp_target[animation_number], temp_position)
+
             else:
-                screen.blit(temp_target, i[3])
+                screen.blit(temp_target, pos(i[3]))
 
 
 board = [[0, 0, 0, 0, 0, 0],
@@ -390,6 +429,39 @@ with open('difficulty.json') as f:
 
 inflection = json_object['inflection']
 difficulties = json_object['difficulties']
+
+button_place = AnimatedSprite((80, 20), (168, 128),
+                              ".\\resources\\buttons\\button_place")
+button_down = AnimatedSprite((38, 24), (189, 102),
+                             ".\\resources\\buttons\\button_down")
+button_up = AnimatedSprite((38, 24), (189, 80),
+                           ".\\resources\\buttons\\button_up")
+button_left = AnimatedSprite((20, 46), (168, 80),
+                             ".\\resources\\buttons\\button_left")
+button_right = AnimatedSprite((20, 46), (228, 80),
+                              ".\\resources\\buttons\\button_right")
+button_flipfront = AnimatedSprite((40, 20), (167, 58),
+                                  ".\\resources\\buttons\\button_flipfront")
+button_flipside = AnimatedSprite((40, 20), (209, 58),
+                                 ".\\resources\\buttons\\button_flipside")
+button_turnleft = AnimatedSprite((40, 20), (167, 40),
+                                 ".\\resources\\buttons\\button_turnleft")
+button_turnright = AnimatedSprite((40, 20), (209, 40),
+                                  ".\\resources\\buttons\\button_turnright")
+
+cards = AnimatedSprite((28, 39), (61, 111), ".\\resources\\cards")
+cards.add_positioned_animation()
+
+numbers = AnimatedSprite((7, 11), (212, 6), ".\\resources\\numbers")
+numbers.add_positioned_animation()
+
+stones = AnimatedSprite((18, 23), (57, 1), ".\\resources\\stones")
+selections = AnimatedSprite((22, 22), (55, 4),
+                            ".\\resources\\selections\\selection_blue",
+                            ".\\resources\\selections\\selection_red")
+
+asp_list = [button_place, button_down, button_up, button_left, button_right, button_flipfront, button_flipside,
+            button_turnleft, button_turnright, cards, numbers, stones]
 
 ####################
 
