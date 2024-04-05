@@ -2,6 +2,7 @@
 # PolyGomino by in_zet
 # 2024/3/22 ~
 
+import sys
 import pygame
 import os
 from shapes import *
@@ -322,25 +323,24 @@ def ministone_draw():
 
 
 def pos(tileset_position: list | int, sprite_type: int = 0):
-    # sprite type // 0: x4 1: stone 2: selection 3: card 4: score 5: turn
+    # sprite type // 0: x4 1: stone 2: selection 3: card 4: score/turn
 
     if sprite_type == 0:
         return [tileset_position[0] * 4, tileset_position[1] * 4]
     elif sprite_type == 1:
-        return [4 * 17 * tileset_position[1], 4 * 17 * tileset_position[0]]
+        return [17 * tileset_position[1], 17 * tileset_position[0]]
     elif sprite_type == 2:
-        return [4 * 17 * tileset_position[1], 4 * 17 * tileset_position[0]]
+        return [17 * tileset_position[1], 17 * tileset_position[0]]
     elif sprite_type == 3:
-        return [4 * 34 * tileset_position, 0]
+        return [34 * tileset_position, 0]
     elif sprite_type == 4:
-        return [4 * 8 * tileset_position, 0]
-    elif sprite_type == 5:
-        return [4 * 8 * tileset_position, 15]
+        return [8 * tileset_position[1], 15 * tileset_position[0]]
 
 
 class AnimatedSprite:
-    def __init__(self, size: tuple[int, int], init_pos: tuple, *directorys):
+    def __init__(self, size: tuple[int, int], init_pos: tuple[int, int], sprite_type: int, *directorys: str):
 
+        self.sprite_type = sprite_type
         self.size = size
         self.images = dict()
         self.queue = []
@@ -366,23 +366,46 @@ class AnimatedSprite:
     #     for i in file_list:
     #         self.images[i.split(".")[0]] = pygame.image.load(f'{directory}\\{i}').convert_alpha()
 
-    def add_positioned_animation(self, target_image: str, name: str, position: list[list, int]):
+    def add_positioned_animation(self, target_image: str, name: str, position: list[list[int]]):
         self.images[name] \
             = position + [self.images[target_image], "PA"]
 
-    def event_call(self, current_event: str, duration: int, next_event: str, position: list[int, int]):
+    def event_call(self, current_event: str, next_event: str | None, position: list[int] | int = [0, 0]):
+        temp_target = self.images[current_event]
+
+        if isinstance(temp_target, list):
+
+            if temp_target[-1] == "PA":
+
+                if len(temp_target) == 3:
+                    duration = -1
+                else:
+                    duration = (len(temp_target) - 2) * animation_delay
+
+            else:
+                duration = len(temp_target) * animation_delay
+
+        else:
+            duration = -1
+
+        if self.queue:
+            for k in range(len(self.queue)):
+                if self.queue[k][3] == position:
+                    self.queue[k] = [current_event, duration, next_event, position]
+
         self.queue.append([current_event, duration, next_event, position])
 
     def event_check(self):
-        for i in range(len(self.queue)):
-            if self.queue[i][1] != 0:
-                self.queue[i][1] -= 1
-                if self.queue[i][1] == 0:
-                    if self.queue[i][2] is None:
-                        del self.queue[i]
+        for k in range(len(self.queue)):
+            if self.queue[k][1] >= 0:
+                self.queue[k][1] -= 1
+                if self.queue[k][1] == 0:
+                    if self.queue[k][2] is None:
+                        del self.queue[k]
                     else:
-                        self.queue[i][0] = self.queue[i][2]
-                        self.queue[i][2] = None
+                        self.queue[k][0] = self.queue[k][2]
+                        self.queue[k][1] = -1
+                        self.queue[k][2] = None
 
     # def event_delete(self):
     #     self.queue = []
@@ -390,25 +413,48 @@ class AnimatedSprite:
     def draw(self):
         for i in self.queue:
             temp_target = self.images[i[0]]
+            temp_trans_pos = pos(i[3], self.sprite_type)
 
             if isinstance(temp_target, list):
 
                 if temp_target[-1] == "PA":
-                    animation_number = len(temp_target) - 2 - (i[1] + animation_delay - 1) // animation_delay
-                    temp_position = tuple([pos(self.init_pos[j] + pos(i[3])[j] + temp_target[animation_number])
-                                           for j in range(2)])
+                    if i[1] == -1:
+                        animation_number = 0
+                    else:
+                        animation_number = len(temp_target) - 2 - (i[1] + animation_delay - 1) // animation_delay
+
+                    temp_position = tuple(pos([self.init_pos[j] + temp_trans_pos[j] + temp_target[animation_number][j]
+                                               for j in range(2)]))
 
                     screen.blit(temp_target[-2], temp_position)
 
                 else:
                     animation_number = len(temp_target) - (i[1] + animation_delay - 1) // animation_delay
-                    temp_position = tuple([pos(self.init_pos[j] + pos(i[3])[j]) for j in range(2)])
+                    temp_position = tuple(pos([self.init_pos[j] + temp_trans_pos[j] for j in range(2)]))
 
                     screen.blit(temp_target[animation_number], temp_position)
 
             else:
-                screen.blit(temp_target, pos(i[3]))
+                temp_position = tuple(pos([self.init_pos[j] + temp_trans_pos[j] for j in range(2)]))
+                screen.blit(temp_target, temp_position)
 
+
+########################################################################################################################
+
+pygame.init()
+
+window_size = [1024, 600]
+screen = pygame.display.set_mode(window_size)
+
+title = "PolyGomino"
+pygame.display.set_caption(title)
+
+fps = 15
+frame = 0
+animation_delay = 1
+run = 1
+
+########################################################################################################################
 
 board = [[0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0],
@@ -430,62 +476,101 @@ with open('difficulty.json') as f:
 inflection = json_object['inflection']
 difficulties = json_object['difficulties']
 
-button_place = AnimatedSprite((80, 20), (168, 128),
+button_place = AnimatedSprite((80, 20), (168, 128), 0,
                               ".\\resources\\buttons\\button_place")
-button_down = AnimatedSprite((38, 24), (189, 102),
+button_place.event_call("button_place_stand", None)
+
+button_down = AnimatedSprite((38, 24), (189, 102), 0,
                              ".\\resources\\buttons\\button_down")
-button_up = AnimatedSprite((38, 24), (189, 80),
+button_down.event_call("button_down_stand", None)
+
+button_up = AnimatedSprite((38, 24), (189, 80), 0,
                            ".\\resources\\buttons\\button_up")
-button_left = AnimatedSprite((20, 46), (168, 80),
+button_up.event_call("button_up_stand", None)
+
+button_left = AnimatedSprite((20, 46), (168, 80), 0,
                              ".\\resources\\buttons\\button_left")
-button_right = AnimatedSprite((20, 46), (228, 80),
+button_left.event_call("button_left_stand", None)
+
+button_right = AnimatedSprite((20, 46), (228, 80), 0,
                               ".\\resources\\buttons\\button_right")
-button_flipfront = AnimatedSprite((40, 20), (167, 58),
+button_right.event_call("button_right_stand", None)
+
+button_flipfront = AnimatedSprite((40, 20), (167, 58), 0,
                                   ".\\resources\\buttons\\button_flipfront")
-button_flipside = AnimatedSprite((40, 20), (209, 58),
+button_flipfront.event_call("button_flipfront_stand", None)
+
+button_flipside = AnimatedSprite((40, 20), (209, 58), 0,
                                  ".\\resources\\buttons\\button_flipside")
-button_turnleft = AnimatedSprite((40, 20), (167, 40),
+button_flipside.event_call("button_flipside_stand", None)
+
+button_turnleft = AnimatedSprite((40, 20), (167, 40), 0,
                                  ".\\resources\\buttons\\button_turnleft")
-button_turnright = AnimatedSprite((40, 20), (209, 40),
+button_turnleft.event_call("button_turnleft_stand", None)
+
+button_turnright = AnimatedSprite((40, 20), (209, 40), 0,
                                   ".\\resources\\buttons\\button_turnright")
+button_turnright.event_call("button_turnright_stand", None)
 
-cards = AnimatedSprite((28, 39), (61, 111), ".\\resources\\cards")
-cards.add_positioned_animation()
 
-numbers = AnimatedSprite((7, 11), (212, 6), ".\\resources\\numbers")
-numbers.add_positioned_animation()
+cards = AnimatedSprite((28, 39), (61, 111), 3, ".\\resources\\cards")
+cards.add_positioned_animation("card_picked", "card_non_picked", [[0, 8]])
+cards.add_positioned_animation("card_picked", "card_pickup", [[0, 1]])
+cards.add_positioned_animation("card_picked", "card_pickdown", [[0, 7]])
+cards.add_positioned_animation("card_picked", "card_emerge",
+                               [[0, 40], [0, 40], [0, 28], [0, 18], [0, 13], [0, 10]])
 
-stones = AnimatedSprite((18, 23), (57, 1), ".\\resources\\stones")
-selections = AnimatedSprite((22, 22), (55, 4),
+for i in range(3):
+    cards.event_call("card_emerge", "card_non_picked", i)
+
+numbers = AnimatedSprite((7, 11), (212, 6), 4, ".\\resources\\numbers")
+
+numbers.add_positioned_animation("number_0", "number_0_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_1", "number_1_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_2", "number_2_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_3", "number_3_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_4", "number_4_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_5", "number_5_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_6", "number_6_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_7", "number_7_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_8", "number_8_scoreup", [[0, -2], [0, -1]])
+numbers.add_positioned_animation("number_9", "number_9_scoreup", [[0, -2], [0, -1]])
+
+for i in range(2):
+    for j in range(5):
+        numbers.event_call("number_0_scoreup", "number_0", [i, j])
+
+stones = AnimatedSprite((18, 23), (57, 1), 1, ".\\resources\\stones")
+selections = AnimatedSprite((22, 22), (55, 4), 2,
                             ".\\resources\\selections\\selection_blue",
                             ".\\resources\\selections\\selection_red")
 
 asp_list = [button_place, button_down, button_up, button_left, button_right, button_flipfront, button_flipside,
-            button_turnleft, button_turnright, cards, numbers, stones]
+            button_turnleft, button_turnright, cards, numbers, stones][::-1]
 
-####################
+main_ui = pygame.image.load(".\\resources\\basic_gui.png").convert_alpha()
 
-pygame.init()
-
-window_size = [1024, 600]
-screen = pygame.display.set_mode(window_size)
-
-title = "PolyGomino"
-pygame.display.set_caption(title)
-
-fps = 10
-frame = 0
-animation_delay = 1
-run = 1
+########################################################################################################################
 
 
 def main_loop():
     global frame
     while run == 1:
         frame += 1
-        pygame.time.Clock().tick(fps)
+
+        screen.blit(main_ui, (0, 0))
+
+        for animated_sprites in asp_list:
+            animated_sprites.draw()
+            animated_sprites.event_check()
 
         pygame.display.flip()
 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        pygame.time.Clock().tick(fps)
 
 main_loop()
