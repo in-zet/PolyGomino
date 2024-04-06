@@ -16,6 +16,9 @@ import copy
 def block_turn_right():
     global current_block_shape, current_block_position
     if current_block_shape:
+
+        selection_call(0)
+
         block_info = current_block_shape[-1]
         new_shape = []
 
@@ -34,10 +37,16 @@ def block_turn_right():
             if final_position >= 7:
                 current_block_position[0] -= final_position - 6
 
+        block_map()
+        selection_call(2)
+
 
 def block_turn_left():
     global current_block_shape, current_block_position
     if current_block_shape:
+
+        selection_call(0)
+
         block_info = current_block_shape[-1]
         new_shape = []
 
@@ -56,17 +65,30 @@ def block_turn_left():
             if final_position >= 7:
                 current_block_position[0] -= final_position - 6
 
+        block_map()
+        selection_call(2)
+
 
 def block_flip_front():
     global current_block_shape
     if current_block_shape:
+        selection_call(0)
+
         current_block_shape = current_block_shape[-2::-1] + current_block_shape[-1]
+
+        block_map()
+        selection_call(2)
 
 
 def block_flip_side():
     global current_block_shape
     if current_block_shape:
+        selection_call(0)
+
         current_block_shape = [i[::-1] for i in current_block_shape[:-1]] + current_block_shape[-1]
+
+        block_map()
+        selection_call(2)
 
 
 def block_move_up():
@@ -74,6 +96,8 @@ def block_move_up():
     if current_block_shape:
         if current_block_position[0] != 0:
             current_block_position = [current_block_position[0] - 1, current_block_position[1]]
+            block_map()
+            selection_call(4)
 
 
 def block_move_down():
@@ -81,6 +105,8 @@ def block_move_down():
     if current_block_shape:
         if current_block_position[0] + current_block_shape[-1][0] < 6:
             current_block_position = [current_block_position[0] + 1, current_block_position[1]]
+            block_map()
+            selection_call(3)
 
 
 def block_move_right():
@@ -88,6 +114,8 @@ def block_move_right():
     if current_block_shape:
         if current_block_position[1] != 0:
             current_block_position = [current_block_position[0], current_block_position[1] - 1]
+            block_map()
+            selection_call(6)
 
 
 def block_move_left():
@@ -95,6 +123,8 @@ def block_move_left():
     if current_block_shape:
         if current_block_position[1] + current_block_shape[-1][1] < 6:
             current_block_position = [current_block_position[0], current_block_position[1] + 1]
+            block_map()
+            selection_call(5)
 
 
 def block_move_to(block_position_moveto: list):
@@ -102,7 +132,32 @@ def block_move_to(block_position_moveto: list):
     if current_block_shape:
         if block_position_moveto[0] + current_block_shape[-1][0] < 6 and \
                 block_position_moveto[1] + current_block_shape[-1][1] < 6:
+            tmp_pos = current_block_position
             current_block_position = block_position_moveto
+
+            block_map()
+
+            if tmp_pos[0] == block_position_moveto[0]:
+                if tmp_pos[1] == block_position_moveto[1]:
+                    pass
+                elif tmp_pos[1] > block_position_moveto[1]:
+                    selection_call(5)
+                else:
+                    selection_call(6)
+            elif tmp_pos[0] > block_position_moveto[0]:
+                if tmp_pos[1] == block_position_moveto[1]:
+                    selection_call(4)
+                elif tmp_pos[1] > block_position_moveto[1]:
+                    selection_call(9)
+                else:
+                    selection_call(10)
+            else:
+                if tmp_pos[1] == block_position_moveto[1]:
+                    selection_call(3)
+                elif tmp_pos[1] > block_position_moveto[1]:
+                    selection_call(7)
+                else:
+                    selection_call(8)
 
 
 def block_drop_check() -> bool:
@@ -121,7 +176,10 @@ def block_drop_check() -> bool:
 
 
 def block_map():
+    # 1: not overlapped / 2: overlapped
+
     global current_block_shape
+
     for i in range(current_block_shape[-1][0]):
         for j in range(current_block_shape[-1][1]):
             if current_block_shape[i][j]:
@@ -132,21 +190,31 @@ def block_map():
 
 
 def block_drop():
-    global board, current_block_shape, current_block_position, deck_selected, turn
+    global board, current_block_shape, current_block_position, deck_selected
+
+    for i in current_block_shape[:-1]:
+        if 2 in i:
+            return False
+
     block_info = current_block_shape[-1]
     for i in range(block_info[0]):
         for j in range(block_info[1]):
             if current_block_shape[i][j]:
                 board[current_block_position[0] + i][current_block_position[1] + j] = 1
+                stones.event_call("stone_fall", "stone_stand",
+                                  [current_block_position[0] + i, current_block_position[1] + j])
+
+    block_pick(deck_selected)
+    cards.event_call("card_delete", ["card_emerge", "card_non_picked"], deck_selected)
     deck_selected = 0
     current_block_shape = []
-    turn += 1
 
 
 def block_delete_check() -> list | bool:
-    global board
+    global board, num_var
     block_delete_target = []
     target_tmp = []
+    del_line_count = 0
 
     # Horizontal
 
@@ -261,7 +329,7 @@ def block_delete_check() -> list | bool:
             if board[5 - j][j] == 1:
                 target_tmp.append((5 - j, j))
             else:
-                target_tmp = []
+                # target_tmp = []
                 break
 
             if j >= 4:
@@ -273,7 +341,7 @@ def block_delete_check() -> list | bool:
             if board[5 - j][j] == 1:
                 target_tmp.append((5 - j, j))
             else:
-                target_tmp = []
+                # target_tmp = []
                 break
 
             if j == 1:
@@ -285,44 +353,106 @@ def block_delete_check() -> list | bool:
     return False
 
 
-def block_delete(block_delete_target):
-    global board, score
-    for i in block_delete_target:
-        board[i[0]][i[1]] = 0
-    score += 10 * len(block_delete_target)
+def block_delete(block_delete_target, delay: int = 0):
+    global board, num_var
+
+    if not delay:
+        for i in block_delete_target:
+            board[i[0]][i[1]] = 0
+            stones.event_call("stone_delete", None, i)
+    else:
+        for i in block_delete_target:
+            board[i[0]][i[1]] = 0
+            stones.event_call("stone_stand", "stone_delete", i, force_duration=2*delay)
+
+    num_var["score"] += 10 * len(block_delete_target)
+    number_call(0, 2 * delay)
+
 
 
 def block_pick(slot: int):
-    global turn, deck
+    global deck
     shape_num = 0
     for i in range(len(inflection)):
-        if turn <= inflection[i]:
+        if num_var["turn"] <= inflection[i]:
             shape_num = random.choices([0, 1, 2, 3, 4], difficulties[i])
             break
-    if turn > inflection[-1]:
+    if num_var["turn"] > inflection[-1]:
         shape_num = random.choices([0, 1, 2, 3, 4], difficulties[-1])
 
-    deck[slot] = [shape_num, random.randint(0, len(llist_shape[shape_num]) - 1)]
+    tmp_shape_num = random.randint(0, len(llist_shape[shape_num]) - 1)
+    deck[slot] = [list(i) for i in llist_shape[shape_num][tmp_shape_num]]
 
 
 def block_load(slot: int):
     global deck, deck_selected, current_block_position, current_block_shape
     deck_selected = slot
     current_block_position = [0, 0]
-    current_block_shape = [list(i) for i in llist_shape[deck[slot][0]][deck[slot][1]]]
+    current_block_shape = deck[slot]
+    block_map()
+    selection_call(1)
+
+    cards.event_call()
 
 
 def block_unload():
     global deck_selected, current_block_shape
+    selection_call(0)
     deck_selected = 0
     current_block_shape = []
 
 
 def ministone_draw():
-    pass
+    for i in range(3):
+        pass
 
 
-def pos(tileset_position: list | int, sprite_type: int = 0):
+slc_animation_list = ["lockoff", "lockon", "waitlockon", "movedown", "moveup", "moveleft", "moveright",
+                                "movedownleft", "movedownright", "moveupleft", "moveupright"]
+slc_color_list = ["blue", "red"]
+
+
+def selection_call(animation_shape: int):
+    # 0: lock off, 1: lock on, 2: wait lock on
+    # 3: down 4: up 5: left 6: right
+    # 7: downleft 8: downright 9: upleft 10: upright
+
+    if animation_shape:
+        for i in range(len(current_block_shape) - 1):
+            for j in range(len(current_block_shape[i])):
+                if current_block_shape[i][j]:
+                    selections.event_call(f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_{slc_animation_list[animation_shape]}',
+                                          f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_stand',
+                                          [j, i], isappend=True)
+
+    else:
+        for i in range(len(current_block_shape) - 1):
+            for j in range(len(current_block_shape[i])):
+                if current_block_shape[i][j]:
+                    selections.event_call(f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_{slc_animation_list[animation_shape]}',
+                                          None, [j, i], isappend=True)
+
+
+num_var_list = ["score", "turn"]
+
+
+def number_call(isscore_isturn: int, wait: int = 0):
+    # 0: score 1: turn
+
+    tmp_num = str(num_var[num_var_list[isscore_isturn]])
+    tmp_num_len = len(tmp_num)
+    if not wait:
+        for i in range(tmp_num_len):
+            numbers.event_call(f'number_{tmp_num[i]}_scoreup', f'number_{tmp_num[i]}',
+                               [isscore_isturn, 5 - tmp_num_len + i])
+    else:
+        for i in range(tmp_num_len):
+            numbers.event_call(None, [f'number_{tmp_num[i]}_scoreup', f'number_{tmp_num[i]}'],
+                               [isscore_isturn, 5 - tmp_num_len + i], isappend=True, force_duration=2*wait)
+
+
+def pos(tileset_position: list | int, sprite_type: int = 0) -> list[int]:
+    # tileset_position: row, column (if sprite_type != 0;)
     # sprite type // 0: x4 1: stone 2: selection 3: card 4: score/turn
 
     if sprite_type == 0:
@@ -370,48 +500,66 @@ class AnimatedSprite:
         self.images[name] \
             = position + [self.images[target_image], "PA"]
 
-    def event_call(self, current_event: str, next_event: str | None, position: list[int] | int = [0, 0]):
-        temp_target = self.images[current_event]
+    def event_call(self, current_event: str | None, next_event: str | None | list[str],
+                   position: list[int] | int = [0, 0], isappend: bool = False, force_duration: int = 0):
 
-        if isinstance(temp_target, list):
+        if current_event:
+            temp_target = self.images[current_event]
 
-            if temp_target[-1] == "PA":
+            if isinstance(temp_target, list):
 
-                if len(temp_target) == 3:
-                    duration = -1
+                if temp_target[-1] == "PA":
+
+                    if len(temp_target) == 3:
+                        duration = -1
+                    else:
+                        duration = (len(temp_target) - 2) * animation_delay
+
                 else:
-                    duration = (len(temp_target) - 2) * animation_delay
+                    duration = len(temp_target) * animation_delay
 
             else:
-                duration = len(temp_target) * animation_delay
-
+                if not force_duration:
+                    duration = -1
+                else:
+                    duration = force_duration * animation_delay
         else:
-            duration = -1
+            duration = force_duration * animation_delay
 
-        if self.queue:
-            for k in range(len(self.queue)):
-                if self.queue[k][3] == position:
-                    self.queue[k] = [current_event, duration, next_event, position]
-
-        self.queue.append([current_event, duration, next_event, position])
+        if self.queue and not isappend:
+            del_list = []
+            for i in range(len(self.queue)):
+                if self.queue[i][3] == position:
+                    del_list.append(i)
+            for i in del_list:
+                del self.queue[i]
+            self.queue.append([current_event, duration, next_event, position])
+        else:
+            self.queue.append([current_event, duration, next_event, position])
 
     def event_check(self):
-        for k in range(len(self.queue)):
-            if self.queue[k][1] >= 0:
-                self.queue[k][1] -= 1
-                if self.queue[k][1] == 0:
-                    if self.queue[k][2] is None:
-                        del self.queue[k]
+        for i in range(len(self.queue)):
+            if self.queue[i][1] >= 0:
+                self.queue[i][1] -= 1
+                if self.queue[i][1] == 0:
+                    if self.queue[i][2] is None:
+                        del self.queue[i]
                     else:
-                        self.queue[k][0] = self.queue[k][2]
-                        self.queue[k][1] = -1
-                        self.queue[k][2] = None
+                        if isinstance(self.queue[i][2], list):
+                            self.event_call(self.queue[i][2][0], self.queue[i][2][1:],
+                                            self.queue[i][3])
+                        else:
+                            self.event_call(self.queue[i][2], None, self.queue[i][3])
 
     # def event_delete(self):
     #     self.queue = []
 
     def draw(self):
         for i in self.queue:
+
+            if i[0] is None:
+                return
+
             temp_target = self.images[i[0]]
             temp_trans_pos = pos(i[3], self.sprite_type)
 
@@ -454,6 +602,8 @@ frame = 0
 animation_delay = 1
 run = 1
 
+cannot_operate = 0
+
 ########################################################################################################################
 
 board = [[0, 0, 0, 0, 0, 0],
@@ -467,8 +617,7 @@ deck = [[], [], []]
 deck_selected = 0  # 1,2,3 / 0 : not selected
 current_block_shape = []  # [] : not selected
 current_block_position = []  # row, column / [] : not selected
-turn = 0
-score = 0
+num_var = {"score": 0, "turn": 0}
 
 with open('difficulty.json') as f:
     json_object = json.load(f)
@@ -520,8 +669,8 @@ cards.add_positioned_animation("card_picked", "card_pickdown", [[0, 7]])
 cards.add_positioned_animation("card_picked", "card_emerge",
                                [[0, 40], [0, 40], [0, 28], [0, 18], [0, 13], [0, 10]])
 
-for i in range(3):
-    cards.event_call("card_emerge", "card_non_picked", i)
+for card_num in range(3):
+    cards.event_call("card_emerge", "card_non_picked", card_num)
 
 numbers = AnimatedSprite((7, 11), (212, 6), 4, ".\\resources\\numbers")
 
@@ -536,9 +685,9 @@ numbers.add_positioned_animation("number_7", "number_7_scoreup", [[0, -2], [0, -
 numbers.add_positioned_animation("number_8", "number_8_scoreup", [[0, -2], [0, -1]])
 numbers.add_positioned_animation("number_9", "number_9_scoreup", [[0, -2], [0, -1]])
 
-for i in range(2):
-    for j in range(5):
-        numbers.event_call("number_0_scoreup", "number_0", [i, j])
+for inumpos in range(2):
+    for jnumpos in range(5):
+        numbers.event_call("number_0_scoreup", "number_0", [inumpos, jnumpos])
 
 stones = AnimatedSprite((18, 23), (57, 1), 1, ".\\resources\\stones")
 selections = AnimatedSprite((22, 22), (55, 4), 2,
@@ -554,7 +703,7 @@ main_ui = pygame.image.load(".\\resources\\basic_gui.png").convert_alpha()
 
 
 def main_loop():
-    global frame
+    global frame, cannot_operate
     while run == 1:
         frame += 1
 
@@ -571,6 +720,66 @@ def main_loop():
                 pygame.quit()
                 sys.exit()
 
+            if not cannot_operate:
+
+                if event.type == pygame.KEYDOWN:
+
+                    if event.key == pygame.K_RETURN:
+                        pass
+                    if event.key == pygame.K_DOWN:
+                        pass
+                    if event.key == pygame.K_UP:
+                        pass
+                    if event.key == pygame.K_RIGHT:
+                        pass
+                    if event.key == pygame.K_PERIOD:
+                        pass
+                    if event.key == pygame.K_SLASH:
+                        pass
+                    if event.key == pygame.K_SEMICOLON:
+                        pass
+                    if event.key == pygame.K_QUOTEDBL:
+                        pass
+                    if event.key == pygame.K_1 or event.key == pygame.K_KP1:
+                        pass
+                    if event.key == pygame.K_2 or event.key == pygame.K_KP2:
+                        pass
+                    if event.key == pygame.K_3 or event.key == pygame.K_KP3:
+                        pass
+                    if event.key == pygame.K_r:
+                        pass
+
+                if event.type == pygame.KEYUP:
+
+                    if event.key == pygame.K_RETURN:
+                        pass
+                    if event.key == pygame.K_DOWN:
+                        pass
+                    if event.key == pygame.K_UP:
+                        pass
+                    if event.key == pygame.K_RIGHT:
+                        pass
+                    if event.key == pygame.K_PERIOD:
+                        pass
+                    if event.key == pygame.K_SLASH:
+                        pass
+                    if event.key == pygame.K_SEMICOLON:
+                        pass
+                    if event.key == pygame.K_QUOTEDBL:
+                        pass
+                    if event.key == pygame.K_1 or event.key == pygame.K_KP1:
+                        pass
+                    if event.key == pygame.K_2 or event.key == pygame.K_KP2:
+                        pass
+                    if event.key == pygame.K_3 or event.key == pygame.K_KP3:
+                        pass
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    pass
+
         pygame.time.Clock().tick(fps)
+
+        if cannot_operate > 0:
+            cannot_operate -= 1
 
 main_loop()
