@@ -43,6 +43,8 @@ def block_turn_right():
         block_map()
         selection_call(2, isinitiallize=False)
 
+    button_turnright.event_call("button_turnright_press", None)
+
 
 def block_turn_left():
     global current_block_shape, current_block_position
@@ -71,6 +73,8 @@ def block_turn_left():
         block_map()
         selection_call(2, isinitiallize=False)
 
+    button_turnleft.event_call("button_turnleft_press", None)
+
 
 def block_flip_front():
     global current_block_shape
@@ -81,6 +85,8 @@ def block_flip_front():
 
         block_map()
         selection_call(2, isinitiallize=False)
+
+    button_flipfront.event_call("button_flipfront_press", None)
 
 
 def block_flip_side():
@@ -93,6 +99,8 @@ def block_flip_side():
         block_map()
         selection_call(2, isinitiallize=False)
 
+    button_flipside.event_call("button_flipside_press", None)
+
 
 def block_move_up():
     global current_block_shape, current_block_position
@@ -101,6 +109,8 @@ def block_move_up():
             current_block_position = [current_block_position[0] - 1, current_block_position[1]]
             block_map()
             selection_call(4)
+
+    button_up.event_call("button_up_press", None)
 
 
 def block_move_down():
@@ -111,6 +121,8 @@ def block_move_down():
             block_map()
             selection_call(3)
 
+    button_down.event_call("button_down_press", None)
+
 
 def block_move_right():
     global current_block_shape, current_block_position
@@ -120,6 +132,8 @@ def block_move_right():
             block_map()
             selection_call(6)
 
+    button_right.event_call("button_right_press", None)
+
 
 def block_move_left():
     global current_block_shape, current_block_position
@@ -128,6 +142,8 @@ def block_move_left():
             current_block_position = [current_block_position[0], current_block_position[1] - 1]
             block_map()
             selection_call(5)
+
+    button_left.event_call("button_left_press", None)
 
 
 def block_move_to(block_position_moveto: list):
@@ -194,6 +210,11 @@ def block_map():
 
 def block_drop() -> bool:
     global board, current_block_shape, current_block_position, deck_selected
+
+    button_place.event_call("button_place_press", None)
+
+    if not current_block_shape:
+        return False
 
     for i in current_block_shape[:-1]:
         if 2 in i:
@@ -388,36 +409,49 @@ def block_delete_check():
     for i in block_delete_target:
         board[i[0]][i[1]] = 0
 
+    if del_line_count:
+        number_call(0, (2 * del_line_count + 4) * animation_delay, isstop=True)
+
     return del_line_count
 
 
 def block_delete(block_delete_target, delay):
     global board, num_var
 
-    print(block_delete_target)
     for i in block_delete_target:
         isoverlap = 0
+
         for j in stones.queue:
             if i in j:
-                if j[0] == "stone_fall":
+                if j[2] == "stone_delete":
+                    stones.event_call(None, "stone_delete", i,
+                                      force_duration=(2 * delay + 2) * animation_delay, isappend=True, isinsert=True)
+                    isoverlap = 1
+                    break
+
+                elif j[0] == "stone_fall":
                     j[2] = None
                     stones.event_call(None, "stone_delete", i,
-                                      force_duration=2 * delay + 2 * animation_delay, isappend=True)
+                                      force_duration=(2 * delay + 2) * animation_delay, isappend=True, isinsert=True)
                     isoverlap = 1
                     break
 
                 elif j[1] != -1:
                     stones.event_call("stone_stand", "stone_delete", i,
-                                      force_duration=2 * delay + 2 * animation_delay, isappend=True)
+                                      force_duration=(2 * delay + 2) * animation_delay, isappend=True, isinsert=True)
                     isoverlap = 1
                     break
 
         if not isoverlap:
             stones.event_call("stone_stand", "stone_delete", i,
-                              force_duration=2 * delay + 2 * animation_delay)
+                              force_duration=2 * delay + 2 * animation_delay, isinsert=True)
 
     num_var["score"] += 10 * len(block_delete_target)
-    number_call(0, 2 * delay + 2 * animation_delay)
+    if delay == 1:
+        number_call(0, (2 * delay + 2) * animation_delay, isclear=True, noappend=True)
+
+    else:
+        number_call(0, (2 * delay + 2) * animation_delay, isclear=True)
 
 
 def block_pick(slot: int):
@@ -509,19 +543,39 @@ def selection_call(animation_shape: int, isinitiallize: bool = True):
 num_var_list = ["score", "turn"]
 
 
-def number_call(isscore_isturn: int, wait: int = 0):
+def number_call(isscore_isturn: int, wait: int = 0,
+                isclear: bool = False, isstop: bool = False, noappend: bool = False):  # WIP
     # 0: score 1: turn
 
     tmp_num = str(num_var[num_var_list[isscore_isturn]])
     tmp_num_len = len(tmp_num)
+    tmp_num_queue = copy.deepcopy(numbers.queue)
+
+    if isstop:
+        for i in range(tmp_num_len):
+            numbers.event_call(None, f'number_{tmp_num[i]}',
+                               [isscore_isturn, 5 - tmp_num_len + i], isappend=True, force_duration=wait)
+
     if not wait:
         for i in range(tmp_num_len):
             numbers.event_call(f'number_{tmp_num[i]}_scoreup', f'number_{tmp_num[i]}',
                                [isscore_isturn, 5 - tmp_num_len + i])
     else:
         for i in range(tmp_num_len):
-            numbers.event_call(None, [f'number_{tmp_num[i]}_scoreup', f'number_{tmp_num[i]}'],
-                               [isscore_isturn, 5 - tmp_num_len + i], isappend=True, force_duration=wait)
+            tmp_pos = [isscore_isturn, 5 - tmp_num_len + i]
+            for j in tmp_num_queue:
+                if j[3] == tmp_pos:
+                    if isclear:
+                        if noappend:
+                            numbers.event_call(j[0], f'number_{tmp_num[i]}_scoreup',
+                                               tmp_pos, force_duration=wait)
+                        else:
+                            numbers.event_call(j[0], f'number_{tmp_num[i]}_scoreup',
+                                               tmp_pos, isappend=True, force_duration=wait)
+                    else:
+                        numbers.event_call(j[0],
+                                           [f'number_{tmp_num[i]}_scoreup', f'number_{tmp_num[i]}'],
+                                           tmp_pos, force_duration=wait)
 
 
 def pos(tileset_position: list | int, sprite_type: int = 0) -> list[int]:
@@ -653,9 +707,10 @@ class AnimatedSprite:
                 if tmp_queue[i][2]:
                     if isinstance(tmp_queue[i][2], list):
                         self.event_call(tmp_queue[i][2][0], tmp_queue[i][2][1:],
-                                        tmp_queue[i][3])
+                                        tmp_queue[i][3], isappend=True)
                     else:
-                        self.event_call(tmp_queue[i][2], None, tmp_queue[i][3])
+                        self.event_call(tmp_queue[i][2], None,
+                                        tmp_queue[i][3],isappend=True)
 
         it = 0
         it_obj = len(self.queue)
@@ -672,8 +727,8 @@ class AnimatedSprite:
     def draw(self):
         for i in self.queue:
 
-            if i[0] is None:
-                return
+            if not i[0]:
+                continue
 
             temp_target = self.images[i[0]]
             temp_trans_pos = pos(i[3], self.sprite_type)
@@ -728,7 +783,7 @@ screen = pygame.display.set_mode(window_size)
 title = "PolyGomino"
 pygame.display.set_caption(title)
 
-fps = 10
+fps = 15
 frame = 0
 animation_delay = 1
 run = 1
@@ -880,7 +935,7 @@ def main_loop():
                     if event.key == pygame.K_RETURN:
                         if block_drop():
                             num_var["turn"] += 1
-                            number_call(1, (2 * block_delete_check() + 3) * animation_delay)
+                            number_call(1, (2 * block_delete_check() + 4) * animation_delay)
                     if event.key == pygame.K_DOWN:
                         block_move_down()
                     if event.key == pygame.K_UP:
@@ -931,23 +986,27 @@ def main_loop():
                 if event.type == pygame.KEYUP:
 
                     if event.key == pygame.K_RETURN:
-                        pass
+                        button_place.event_call("button_place_detach", "button_place_stand")
                     if event.key == pygame.K_DOWN:
-                        pass
+                        button_down.event_call("button_down_detach", "button_down_stand")
                     if event.key == pygame.K_UP:
-                        pass
+                        button_up.event_call("button_up_detach", "button_up_stand")
                     if event.key == pygame.K_LEFT:
-                        pass
+                        button_left.event_call("button_left_detach", "button_left_stand")
                     if event.key == pygame.K_RIGHT:
-                        pass
+                        button_right.event_call("button_right_detach", "button_right_stand")
                     if event.key == pygame.K_PERIOD:
-                        pass
+                        button_flipfront.event_call("button_flipfront_detach",
+                                                    "button_flipfront_stand")
                     if event.key == pygame.K_SLASH:
-                        pass
+                        button_flipside.event_call("button_flipside_detach",
+                                                   "button_flipside_stand")
                     if event.key == pygame.K_SEMICOLON:
-                        pass
-                    if event.key == pygame.K_QUOTEDBL:
-                        pass
+                        button_turnleft.event_call("button_turnleft_detach",
+                                                   "button_turnleft_stand")
+                    if event.key == pygame.K_QUOTE:
+                        button_turnright.event_call("button_turnright_detach",
+                                                    "button_turnright_stand")
                     if event.key == pygame.K_1 or event.key == pygame.K_KP1:
                         pass
                     if event.key == pygame.K_2 or event.key == pygame.K_KP2:
