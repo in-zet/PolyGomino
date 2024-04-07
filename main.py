@@ -160,19 +160,19 @@ def block_move_to(block_position_moveto: list):
                     selection_call(8)
 
 
-def block_drop_check() -> bool:
-    # if current_block_shape != ():
-    #     block_info = current_block_shape[-1]
-    #     for i in range(block_info[0]):
-    #         for j in range(block_info[1]):
-    #             if current_block_shape[i][j]:
-    #                 if board[current_block_position[0] + i][current_block_position[1] + j]:
-    #                     return False
-    #     return True
-    for i in current_block_shape[:-1]:
-        if 2 in i:
-            return False
-    return True
+# def block_drop_check() -> bool:
+#     # if current_block_shape != ():
+#     #     block_info = current_block_shape[-1]
+#     #     for i in range(block_info[0]):
+#     #         for j in range(block_info[1]):
+#     #             if current_block_shape[i][j]:
+#     #                 if board[current_block_position[0] + i][current_block_position[1] + j]:
+#     #                     return False
+#     #     return True
+#     for i in current_block_shape[:-1]:
+#         if 2 in i:
+#             return False
+#     return True
 
 
 def block_map():
@@ -189,7 +189,7 @@ def block_map():
                     current_block_shape[i][j] = 1
 
 
-def block_drop():
+def block_drop() -> bool:
     global board, current_block_shape, current_block_position, deck_selected
 
     for i in current_block_shape[:-1]:
@@ -209,10 +209,12 @@ def block_drop():
     deck_selected = 0
     current_block_shape = []
 
+    return True
 
-def block_delete_check() -> list | bool:
+
+def block_delete_check():
     global board, num_var
-    block_delete_target = []
+    # block_delete_target = []
     target_tmp = []
     del_line_count = 0
 
@@ -229,7 +231,8 @@ def block_delete_check() -> list | bool:
                     break
 
                 if j >= 4:
-                    block_delete_target += target_tmp
+                    block_delete(target_tmp, del_line_count)
+                    del_line_count += 1
                     target_tmp = []
 
         else:
@@ -241,7 +244,8 @@ def block_delete_check() -> list | bool:
                     break
 
                 if j == 1:
-                    block_delete_target += target_tmp
+                    block_delete(target_tmp, del_line_count)
+                    del_line_count += 1
                     target_tmp = []
 
     # Vertical
@@ -257,7 +261,8 @@ def block_delete_check() -> list | bool:
                     break
 
                 if j >= 4:
-                    block_delete_target += target_tmp
+                    block_delete(target_tmp, del_line_count)
+                    del_line_count += 1
                     target_tmp = []
 
         else:
@@ -269,7 +274,8 @@ def block_delete_check() -> list | bool:
                     break
 
                 if j == 1:
-                    block_delete_target += target_tmp
+                    block_delete(target_tmp, del_line_count)
+                    del_line_count += 1
                     target_tmp = []
 
     # Diagonal_5
@@ -291,7 +297,8 @@ def block_delete_check() -> list | bool:
                 break
 
             if j == 4:
-                block_delete_target += target_tmp
+                block_delete(target_tmp, del_line_count)
+                del_line_count += 1
                 target_tmp = []
 
     # Diagonal_6_down
@@ -306,7 +313,8 @@ def block_delete_check() -> list | bool:
                 break
 
             if j >= 4:
-                block_delete_target += target_tmp
+                block_delete(target_tmp, del_line_count)
+                del_line_count += 1
                 target_tmp = []
 
     else:
@@ -318,7 +326,8 @@ def block_delete_check() -> list | bool:
                 break
 
             if j == 1:
-                block_delete_target += target_tmp
+                block_delete(target_tmp, del_line_count)
+                del_line_count += 1
                 target_tmp = []
 
     # Diagonal_6_up
@@ -333,7 +342,8 @@ def block_delete_check() -> list | bool:
                 break
 
             if j >= 4:
-                block_delete_target += target_tmp
+                block_delete(target_tmp, del_line_count)
+                del_line_count += 1
                 target_tmp = []
 
     else:
@@ -345,12 +355,13 @@ def block_delete_check() -> list | bool:
                 break
 
             if j == 1:
-                block_delete_target += target_tmp
+                block_delete(target_tmp, del_line_count)
+                del_line_count += 1
                 target_tmp = []
 
-    if block_delete_target:
-        return block_delete_target
-    return False
+    # if block_delete_target:
+    #     return block_delete_target
+    # return False
 
 
 def block_delete(block_delete_target, delay: int = 0):
@@ -363,14 +374,31 @@ def block_delete(block_delete_target, delay: int = 0):
     else:
         for i in block_delete_target:
             board[i[0]][i[1]] = 0
-            stones.event_call("stone_stand", "stone_delete", i, force_duration=2*delay)
+            stones.event_call("stone_stand", "stone_delete", i, force_duration=2 * delay)
 
     num_var["score"] += 10 * len(block_delete_target)
     number_call(0, 2 * delay)
 
 
+ministone_preset = {(1, 1): [4, 10, (9, 12)], (2, 2): [3, 8, (6, 9)], (2, 1): [4, 10, (9, 7)], (3, 3): [2, 6, (5, 8)],
+                    (3, 2): [3, 8, (6, 5)], (3, 1): [3, 8, (10, 5)], (4, 4): [1, 5, (4, 7)], (4, 3): [2, 6, (5, 5)],
+                    (4, 2): [2, 6, (8, 5)], (4, 1): [2, 6, (11, 5)], (5, 5): [0, 4, (4, 7)], (5, 4): [1, 5, (4, 5)],
+                    (5, 3): [1, 5, (6, 5)], (5, 2): [1, 5, (9, 5)], (5, 1): [1, 5, (11, 5)], (6, 5): [0, 4, (4, 5)],
+                    (6, 4): [0, 4, (6, 5)], (6, 3): [0, 4, (8, 5)], (6, 2): [0, 4, (10, 5)], (6, 1): [0, 4, (12, 5)]}
+ministone_images = [[pygame.image.load(".\\resources\\ministones\\ministone_verybig.png").convert_alpha()],
+                    [pygame.image.load(".\\resources\\ministones\\ministone_big.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_big_empty.png").convert_alpha()],
+                    [pygame.image.load(".\\resources\\ministones\\ministone_medium.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_medium_empty.png").convert_alpha()],
+                    [pygame.image.load(".\\resources\\ministones\\ministone_small.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_small_empty.png").convert_alpha()],
+                    [pygame.image.load(".\\resources\\ministones\\ministone_verysmall.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_verysmall_empty.png").convert_alpha()]]
+
 
 def block_pick(slot: int):
+    # slot = position + 1
+
     global deck
     shape_num = 0
     for i in range(len(inflection)):
@@ -381,23 +409,29 @@ def block_pick(slot: int):
         shape_num = random.choices([0, 1, 2, 3, 4], difficulties[-1])
 
     tmp_shape_num = random.randint(0, len(llist_shape[shape_num]) - 1)
-    deck[slot] = [list(i) for i in llist_shape[shape_num][tmp_shape_num]]
+    deck[slot - 1] = [list(i) for i in llist_shape[shape_num][tmp_shape_num]]
+    deck_ministone[slot - 1] =
+    ministone_preset[deck[slot - 1][-1]]
 
 
 def block_load(slot: int):
+    # slot = position + 1
+
     global deck, deck_selected, current_block_position, current_block_shape
     deck_selected = slot
     current_block_position = [0, 0]
-    current_block_shape = deck[slot]
+    current_block_shape = deck[slot - 1]
     block_map()
     selection_call(1)
 
-    cards.event_call()
+    cards.event_call("card_pickup", "card_picked", slot - 1)
 
 
 def block_unload():
     global deck_selected, current_block_shape
     selection_call(0)
+    cards.event_call("card_pickdown", "card_non_picked", deck_selected - 1)
+
     deck_selected = 0
     current_block_shape = []
 
@@ -408,7 +442,7 @@ def ministone_draw():
 
 
 slc_animation_list = ["lockoff", "lockon", "waitlockon", "movedown", "moveup", "moveleft", "moveright",
-                                "movedownleft", "movedownright", "moveupleft", "moveupright"]
+                      "movedownleft", "movedownright", "moveupleft", "moveupright"]
 slc_color_list = ["blue", "red"]
 
 
@@ -421,16 +455,18 @@ def selection_call(animation_shape: int):
         for i in range(len(current_block_shape) - 1):
             for j in range(len(current_block_shape[i])):
                 if current_block_shape[i][j]:
-                    selections.event_call(f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_{slc_animation_list[animation_shape]}',
-                                          f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_stand',
-                                          [j, i], isappend=True)
+                    selections.event_call(
+                        f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_{slc_animation_list[animation_shape]}',
+                        f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_stand',
+                        [j, i], isappend=True)
 
     else:
         for i in range(len(current_block_shape) - 1):
             for j in range(len(current_block_shape[i])):
                 if current_block_shape[i][j]:
-                    selections.event_call(f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_{slc_animation_list[animation_shape]}',
-                                          None, [j, i], isappend=True)
+                    selections.event_call(
+                        f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_{slc_animation_list[animation_shape]}',
+                        None, [j, i], isappend=True)
 
 
 num_var_list = ["score", "turn"]
@@ -448,7 +484,7 @@ def number_call(isscore_isturn: int, wait: int = 0):
     else:
         for i in range(tmp_num_len):
             numbers.event_call(None, [f'number_{tmp_num[i]}_scoreup', f'number_{tmp_num[i]}'],
-                               [isscore_isturn, 5 - tmp_num_len + i], isappend=True, force_duration=2*wait)
+                               [isscore_isturn, 5 - tmp_num_len + i], isappend=True, force_duration=2 * wait)
 
 
 def pos(tileset_position: list | int, sprite_type: int = 0) -> list[int]:
@@ -614,6 +650,7 @@ board = [[0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0]]
 
 deck = [[], [], []]
+deck_ministone = [[], [], []]
 deck_selected = 0  # 1,2,3 / 0 : not selected
 current_block_shape = []  # [] : not selected
 current_block_position = []  # row, column / [] : not selected
@@ -661,7 +698,6 @@ button_turnright = AnimatedSprite((40, 20), (209, 40), 0,
                                   ".\\resources\\buttons\\button_turnright")
 button_turnright.event_call("button_turnright_stand", None)
 
-
 cards = AnimatedSprite((28, 39), (61, 111), 3, ".\\resources\\cards")
 cards.add_positioned_animation("card_picked", "card_non_picked", [[0, 8]])
 cards.add_positioned_animation("card_picked", "card_pickup", [[0, 1]])
@@ -699,6 +735,7 @@ asp_list = [button_place, button_down, button_up, button_left, button_right, but
 
 main_ui = pygame.image.load(".\\resources\\basic_gui.png").convert_alpha()
 
+
 ########################################################################################################################
 
 
@@ -725,23 +762,33 @@ def main_loop():
                 if event.type == pygame.KEYDOWN:
 
                     if event.key == pygame.K_RETURN:
-                        pass
+                        if block_drop():
+                            block_delete_check()
                     if event.key == pygame.K_DOWN:
-                        pass
+                        block_move_down()
                     if event.key == pygame.K_UP:
-                        pass
+                        block_move_up()
+                    if event.key == pygame.K_LEFT:
+                        block_move_left()
                     if event.key == pygame.K_RIGHT:
-                        pass
+                        block_move_right()
                     if event.key == pygame.K_PERIOD:
-                        pass
+                        block_flip_front()
                     if event.key == pygame.K_SLASH:
-                        pass
+                        block_flip_side()
                     if event.key == pygame.K_SEMICOLON:
-                        pass
+                        block_turn_left()
                     if event.key == pygame.K_QUOTEDBL:
-                        pass
+                        block_turn_right()
                     if event.key == pygame.K_1 or event.key == pygame.K_KP1:
-                        pass
+                        if not deck_selected:
+                            block_load(1)
+                        else:
+                            if deck_selected == 1:
+                                block_unload()
+                            else:
+                                block_unload()
+                                block_load(1)
                     if event.key == pygame.K_2 or event.key == pygame.K_KP2:
                         pass
                     if event.key == pygame.K_3 or event.key == pygame.K_KP3:
@@ -756,6 +803,8 @@ def main_loop():
                     if event.key == pygame.K_DOWN:
                         pass
                     if event.key == pygame.K_UP:
+                        pass
+                    if event.key == pygame.K_LEFT:
                         pass
                     if event.key == pygame.K_RIGHT:
                         pass
@@ -781,5 +830,6 @@ def main_loop():
 
         if cannot_operate > 0:
             cannot_operate -= 1
+
 
 main_loop()
