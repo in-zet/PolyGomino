@@ -13,6 +13,9 @@ import time
 import copy
 
 
+pygame.init()
+
+
 def block_turn_right():
     global current_block_shape, current_block_position
     if current_block_shape:
@@ -38,7 +41,7 @@ def block_turn_right():
                 current_block_position[0] -= final_position - 6
 
         block_map()
-        selection_call(2)
+        selection_call(2, isinitiallize=False)
 
 
 def block_turn_left():
@@ -66,7 +69,7 @@ def block_turn_left():
                 current_block_position[0] -= final_position - 6
 
         block_map()
-        selection_call(2)
+        selection_call(2, isinitiallize=False)
 
 
 def block_flip_front():
@@ -74,10 +77,10 @@ def block_flip_front():
     if current_block_shape:
         selection_call(0)
 
-        current_block_shape = current_block_shape[-2::-1] + current_block_shape[-1]
+        current_block_shape = current_block_shape[-2::-1] + [current_block_shape[-1]]
 
         block_map()
-        selection_call(2)
+        selection_call(2, isinitiallize=False)
 
 
 def block_flip_side():
@@ -85,10 +88,10 @@ def block_flip_side():
     if current_block_shape:
         selection_call(0)
 
-        current_block_shape = [i[::-1] for i in current_block_shape[:-1]] + current_block_shape[-1]
+        current_block_shape = [i[::-1] for i in current_block_shape[:-1]] + [current_block_shape[-1]]
 
         block_map()
-        selection_call(2)
+        selection_call(2, isinitiallize=False)
 
 
 def block_move_up():
@@ -112,8 +115,8 @@ def block_move_down():
 def block_move_right():
     global current_block_shape, current_block_position
     if current_block_shape:
-        if current_block_position[1] != 0:
-            current_block_position = [current_block_position[0], current_block_position[1] - 1]
+        if current_block_position[1] + current_block_shape[-1][1] < 6:
+            current_block_position = [current_block_position[0], current_block_position[1] + 1]
             block_map()
             selection_call(6)
 
@@ -121,8 +124,8 @@ def block_move_right():
 def block_move_left():
     global current_block_shape, current_block_position
     if current_block_shape:
-        if current_block_position[1] + current_block_shape[-1][1] < 6:
-            current_block_position = [current_block_position[0], current_block_position[1] + 1]
+        if current_block_position[1] != 0:
+            current_block_position = [current_block_position[0], current_block_position[1] - 1]
             block_map()
             selection_call(5)
 
@@ -196,6 +199,8 @@ def block_drop() -> bool:
         if 2 in i:
             return False
 
+    selection_call(0)
+
     block_info = current_block_shape[-1]
     for i in range(block_info[0]):
         for j in range(block_info[1]):
@@ -205,16 +210,16 @@ def block_drop() -> bool:
                                   [current_block_position[0] + i, current_block_position[1] + j])
 
     block_pick(deck_selected)
-    cards.event_call("card_delete", ["card_emerge", "card_non_picked"], deck_selected)
+    cards.event_call("card_delete", ["card_emerge", "card_non_picked"], deck_selected - 1)
     deck_selected = 0
-    current_block_shape = []
 
+    current_block_shape = []
     return True
 
 
 def block_delete_check():
     global board, num_var
-    # block_delete_target = []
+    block_delete_target = []
     target_tmp = []
     del_line_count = 0
 
@@ -222,29 +227,33 @@ def block_delete_check():
 
     for i in range(6):
         if board[i][0] == 1:
-            target_tmp.append((i, 0))
-            for j in range(1, 6):
+            target_tmp.append([i, 0])
+            for j in range(1, 5):
                 if board[i][j] == 1:
-                    target_tmp.append((i, j))
+                    target_tmp.append([i, j])
                 else:
                     target_tmp = []
                     break
 
-                if j >= 4:
-                    block_delete(target_tmp, del_line_count)
+                if j == 4:
+                    if board[i][5] == 1:
+                        target_tmp.append([i, 5])
+                    block_delete(target_tmp, del_line_count + 1)
+                    block_delete_target += target_tmp
                     del_line_count += 1
                     target_tmp = []
 
         else:
             for j in range(1, 6)[::-1]:
                 if board[i][j] == 1:
-                    target_tmp.append((i, j))
+                    target_tmp.append([i, j])
                 else:
                     target_tmp = []
                     break
 
                 if j == 1:
-                    block_delete(target_tmp, del_line_count)
+                    block_delete(target_tmp, del_line_count + 1)
+                    block_delete_target += target_tmp
                     del_line_count += 1
                     target_tmp = []
 
@@ -252,29 +261,33 @@ def block_delete_check():
 
     for i in range(6):
         if board[0][i] == 1:
-            target_tmp.append((0, i))
-            for j in range(1, 6):
+            target_tmp.append([0, i])
+            for j in range(1, 5):
                 if board[j][i] == 1:
-                    target_tmp.append((j, i))
+                    target_tmp.append([j, i])
                 else:
                     target_tmp = []
                     break
 
-                if j >= 4:
-                    block_delete(target_tmp, del_line_count)
+                if j == 4:
+                    if board[5][i] == 1:
+                        target_tmp.append([5, i])
+                    block_delete(target_tmp, del_line_count + 1)
+                    block_delete_target += target_tmp
                     del_line_count += 1
                     target_tmp = []
 
         else:
             for j in range(1, 6)[::-1]:
                 if board[j][i] == 1:
-                    target_tmp.append((j, i))
+                    target_tmp.append([j, i])
                 else:
                     target_tmp = []
                     break
 
                 if j == 1:
-                    block_delete(target_tmp, del_line_count)
+                    block_delete(target_tmp, del_line_count + 1)
+                    block_delete_target += target_tmp
                     del_line_count += 1
                     target_tmp = []
 
@@ -282,7 +295,7 @@ def block_delete_check():
 
     diag_5_start = [(0, 1), (1, 0), (4, 0), (5, 1)]
 
-    for i in range(3):
+    for i in range(4):
 
         if i <= 1:
             modf = 1
@@ -291,71 +304,80 @@ def block_delete_check():
 
         for j in range(5):
             if board[diag_5_start[i][0] + j * modf][diag_5_start[i][1] + j] == 1:
-                target_tmp.append((diag_5_start[i][0] + j * modf, diag_5_start[i][1] + j))
+                target_tmp.append([diag_5_start[i][0] + j * modf, diag_5_start[i][1] + j])
             else:
                 target_tmp = []
                 break
 
             if j == 4:
-                block_delete(target_tmp, del_line_count)
+                block_delete(target_tmp, del_line_count + 1)
+                block_delete_target += target_tmp
                 del_line_count += 1
                 target_tmp = []
 
     # Diagonal_6_down
 
     if board[0][0] == 1:
-        target_tmp.append((0, 0))
-        for j in range(1, 6):
+        target_tmp.append([0, 0])
+        for j in range(1, 5):
             if board[j][j] == 1:
-                target_tmp.append((j, j))
+                target_tmp.append([j, j])
             else:
                 target_tmp = []
                 break
 
-            if j >= 4:
-                block_delete(target_tmp, del_line_count)
+            if j == 4:
+                if board[5][5] == 1:
+                    target_tmp.append([5, 5])
+                block_delete(target_tmp, del_line_count + 1)
+                block_delete_target += target_tmp
                 del_line_count += 1
                 target_tmp = []
 
     else:
         for j in range(1, 6)[::-1]:
             if board[j][j] == 1:
-                target_tmp.append((j, j))
+                target_tmp.append([j, j])
             else:
                 target_tmp = []
                 break
 
             if j == 1:
-                block_delete(target_tmp, del_line_count)
+                block_delete(target_tmp, del_line_count + 1)
+                block_delete_target += target_tmp
                 del_line_count += 1
                 target_tmp = []
 
     # Diagonal_6_up
 
     if board[5][0] == 1:
-        target_tmp.append((5, 0))
-        for j in range(1, 6):
+        target_tmp.append([5, 0])
+        for j in range(1, 5):
             if board[5 - j][j] == 1:
-                target_tmp.append((5 - j, j))
+                target_tmp.append([5 - j, j])
             else:
                 # target_tmp = []
                 break
 
-            if j >= 4:
-                block_delete(target_tmp, del_line_count)
+            if j == 4:
+                if board[0][5] == 1:
+                    target_tmp.append([0, 5])
+                block_delete(target_tmp, del_line_count+ 1)
+                block_delete_target += target_tmp
                 del_line_count += 1
                 target_tmp = []
 
     else:
         for j in range(1, 6)[::-1]:
             if board[5 - j][j] == 1:
-                target_tmp.append((5 - j, j))
+                target_tmp.append([5 - j, j])
             else:
                 # target_tmp = []
                 break
 
             if j == 1:
-                block_delete(target_tmp, del_line_count)
+                block_delete(target_tmp, del_line_count + 1)
+                block_delete_target += target_tmp
                 del_line_count += 1
                 target_tmp = []
 
@@ -363,37 +385,39 @@ def block_delete_check():
     #     return block_delete_target
     # return False
 
+    for i in block_delete_target:
+        board[i[0]][i[1]] = 0
 
-def block_delete(block_delete_target, delay: int = 0):
+    return del_line_count
+
+
+def block_delete(block_delete_target, delay):
     global board, num_var
 
-    if not delay:
-        for i in block_delete_target:
-            board[i[0]][i[1]] = 0
-            stones.event_call("stone_delete", None, i)
-    else:
-        for i in block_delete_target:
-            board[i[0]][i[1]] = 0
-            stones.event_call("stone_stand", "stone_delete", i, force_duration=2 * delay)
+    print(block_delete_target)
+    for i in block_delete_target:
+        isoverlap = 0
+        for j in stones.queue:
+            if i in j:
+                if j[0] == "stone_fall":
+                    j[2] = None
+                    stones.event_call(None, "stone_delete", i,
+                                      force_duration=2 * delay + 2 * animation_delay, isappend=True)
+                    isoverlap = 1
+                    break
+
+                elif j[1] != -1:
+                    stones.event_call("stone_stand", "stone_delete", i,
+                                      force_duration=2 * delay + 2 * animation_delay, isappend=True)
+                    isoverlap = 1
+                    break
+
+        if not isoverlap:
+            stones.event_call("stone_stand", "stone_delete", i,
+                              force_duration=2 * delay + 2 * animation_delay)
 
     num_var["score"] += 10 * len(block_delete_target)
-    number_call(0, 2 * delay)
-
-
-ministone_preset = {(1, 1): [4, 10, (9, 12)], (2, 2): [3, 8, (6, 9)], (2, 1): [4, 10, (9, 7)], (3, 3): [2, 6, (5, 8)],
-                    (3, 2): [3, 8, (6, 5)], (3, 1): [3, 8, (10, 5)], (4, 4): [1, 5, (4, 7)], (4, 3): [2, 6, (5, 5)],
-                    (4, 2): [2, 6, (8, 5)], (4, 1): [2, 6, (11, 5)], (5, 5): [0, 4, (4, 7)], (5, 4): [1, 5, (4, 5)],
-                    (5, 3): [1, 5, (6, 5)], (5, 2): [1, 5, (9, 5)], (5, 1): [1, 5, (11, 5)], (6, 5): [0, 4, (4, 5)],
-                    (6, 4): [0, 4, (6, 5)], (6, 3): [0, 4, (8, 5)], (6, 2): [0, 4, (10, 5)], (6, 1): [0, 4, (12, 5)]}
-ministone_images = [[pygame.image.load(".\\resources\\ministones\\ministone_verybig.png").convert_alpha()],
-                    [pygame.image.load(".\\resources\\ministones\\ministone_big.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_big_empty.png").convert_alpha()],
-                    [pygame.image.load(".\\resources\\ministones\\ministone_medium.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_medium_empty.png").convert_alpha()],
-                    [pygame.image.load(".\\resources\\ministones\\ministone_small.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_small_empty.png").convert_alpha()],
-                    [pygame.image.load(".\\resources\\ministones\\ministone_verysmall.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_verysmall_empty.png").convert_alpha()]]
+    number_call(0, 2 * delay + 2 * animation_delay)
 
 
 def block_pick(slot: int):
@@ -403,15 +427,29 @@ def block_pick(slot: int):
     shape_num = 0
     for i in range(len(inflection)):
         if num_var["turn"] <= inflection[i]:
-            shape_num = random.choices([0, 1, 2, 3, 4], difficulties[i])
+            shape_num = random.choices([0, 1, 2, 3, 4], difficulties[i])[0]
             break
     if num_var["turn"] > inflection[-1]:
-        shape_num = random.choices([0, 1, 2, 3, 4], difficulties[-1])
+        shape_num = random.choices([0, 1, 2, 3, 4], difficulties[-1])[0]
 
     tmp_shape_num = random.randint(0, len(llist_shape[shape_num]) - 1)
     deck[slot - 1] = [list(i) for i in llist_shape[shape_num][tmp_shape_num]]
-    deck_ministone[slot - 1] =
-    ministone_preset[deck[slot - 1][-1]]
+
+    tmp_shape_size = deck[slot - 1][-1]
+
+    tmp_ministone_size = (6 - tmp_shape_size[0] - (tmp_shape_size[1] // tmp_shape_size[0]))
+
+    deck_ministone[slot - 1] = [
+                                [
+                                 [
+                                  4 * ((ministone_size_pixel[tmp_ministone_size] + 1) * [j, i][k] +
+                                       ministone_preset[tuple(tmp_shape_size)][k])
+                                  for k in range(2)
+                                 ],
+                                 ministone_images[tmp_ministone_size][deck[slot - 1][i][j]]
+                                ]
+                                for i in range(tmp_shape_size[0]) for j in range(tmp_shape_size[1])
+                               ]
 
 
 def block_load(slot: int):
@@ -436,20 +474,18 @@ def block_unload():
     current_block_shape = []
 
 
-def ministone_draw():
-    for i in range(3):
-        pass
-
-
 slc_animation_list = ["lockoff", "lockon", "waitlockon", "movedown", "moveup", "moveleft", "moveright",
                       "movedownleft", "movedownright", "moveupleft", "moveupright"]
 slc_color_list = ["blue", "red"]
 
 
-def selection_call(animation_shape: int):
+def selection_call(animation_shape: int, isinitiallize: bool = True):
     # 0: lock off, 1: lock on, 2: wait lock on
     # 3: down 4: up 5: left 6: right
     # 7: downleft 8: downright 9: upleft 10: upright
+
+    if isinitiallize:
+        selections.event_delete()
 
     if animation_shape:
         for i in range(len(current_block_shape) - 1):
@@ -458,7 +494,7 @@ def selection_call(animation_shape: int):
                     selections.event_call(
                         f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_{slc_animation_list[animation_shape]}',
                         f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_stand',
-                        [j, i], isappend=True)
+                        [i + current_block_position[0], j + current_block_position[1]], isappend=True)
 
     else:
         for i in range(len(current_block_shape) - 1):
@@ -466,7 +502,8 @@ def selection_call(animation_shape: int):
                 if current_block_shape[i][j]:
                     selections.event_call(
                         f'selection_{slc_color_list[current_block_shape[i][j] - 1]}_{slc_animation_list[animation_shape]}',
-                        None, [j, i], isappend=True)
+                        None, [i + current_block_position[0], j + current_block_position[1]],
+                        isappend=True)
 
 
 num_var_list = ["score", "turn"]
@@ -484,7 +521,7 @@ def number_call(isscore_isturn: int, wait: int = 0):
     else:
         for i in range(tmp_num_len):
             numbers.event_call(None, [f'number_{tmp_num[i]}_scoreup', f'number_{tmp_num[i]}'],
-                               [isscore_isturn, 5 - tmp_num_len + i], isappend=True, force_duration=2 * wait)
+                               [isscore_isturn, 5 - tmp_num_len + i], isappend=True, force_duration=wait)
 
 
 def pos(tileset_position: list | int, sprite_type: int = 0) -> list[int]:
@@ -537,7 +574,8 @@ class AnimatedSprite:
             = position + [self.images[target_image], "PA"]
 
     def event_call(self, current_event: str | None, next_event: str | None | list[str],
-                   position: list[int] | int = [0, 0], isappend: bool = False, force_duration: int = 0):
+                   position: list[int] | int = [0, 0], isappend: bool = False, force_duration: int = 0,
+                   isinsert: bool = False):
 
         if current_event:
             temp_target = self.images[current_event]
@@ -567,28 +605,69 @@ class AnimatedSprite:
             for i in range(len(self.queue)):
                 if self.queue[i][3] == position:
                     del_list.append(i)
-            for i in del_list:
-                del self.queue[i]
-            self.queue.append([current_event, duration, next_event, position])
+            for i in range(len(del_list)):
+                del self.queue[del_list[i]]
+                del_list = list(map(lambda x: x - 1, del_list))
+
+            if isinsert:
+                self.queue.insert(0, [current_event, duration, next_event, position])
+            else:
+                self.queue.append([current_event, duration, next_event, position])
+            return len(del_list)
+
         else:
-            self.queue.append([current_event, duration, next_event, position])
+            if isinsert:
+                self.queue.insert(0, [current_event, duration, next_event, position])
+            else:
+                self.queue.append([current_event, duration, next_event, position])
 
     def event_check(self):
-        for i in range(len(self.queue)):
-            if self.queue[i][1] >= 0:
-                self.queue[i][1] -= 1
-                if self.queue[i][1] == 0:
-                    if self.queue[i][2] is None:
-                        del self.queue[i]
-                    else:
-                        if isinstance(self.queue[i][2], list):
-                            self.event_call(self.queue[i][2][0], self.queue[i][2][1:],
-                                            self.queue[i][3])
-                        else:
-                            self.event_call(self.queue[i][2], None, self.queue[i][3])
 
-    # def event_delete(self):
-    #     self.queue = []
+        # del_list = []
+        # it = 0
+        # it_obj = len(self.queue)
+        # while it < it_obj:
+        #     if self.queue[it][1] >= 0:
+        #         self.queue[it][1] -= 1
+        #         if self.queue[it][1] == 0:
+        #             if not self.queue[it][2]:
+        #                 del_list.append(it)
+        #             else:
+        #                 if isinstance(self.queue[it][2], list):
+        #                     tmp_num = self.event_call(self.queue[it][2][0], self.queue[it][2][1:],
+        #                                     self.queue[it][3])
+        #                 else:
+        #                     tmp_num = self.event_call(self.queue[it][2], None, self.queue[it][3])
+        #                 it -= tmp_num
+        #                 it_obj -= tmp_num
+        #     it += 1
+
+        for i in self.queue:
+            if i[1] > 0:
+                i[1] -= 1
+
+        tmp_queue = copy.deepcopy(self.queue)
+
+        for i in range(len(self.queue)):
+            if tmp_queue[i][1] == 0:
+                if tmp_queue[i][2]:
+                    if isinstance(tmp_queue[i][2], list):
+                        self.event_call(tmp_queue[i][2][0], tmp_queue[i][2][1:],
+                                        tmp_queue[i][3])
+                    else:
+                        self.event_call(tmp_queue[i][2], None, tmp_queue[i][3])
+
+        it = 0
+        it_obj = len(self.queue)
+        while it < it_obj:
+            if not self.queue[it][1]:
+                del self.queue[it]
+                it -= 1
+                it_obj -= 1
+            it += 1
+
+    def event_delete(self):
+        self.queue = []
 
     def draw(self):
         for i in self.queue:
@@ -622,10 +701,26 @@ class AnimatedSprite:
                 temp_position = tuple(pos([self.init_pos[j] + temp_trans_pos[j] for j in range(2)]))
                 screen.blit(temp_target, temp_position)
 
+            if self == cards and i[0] != "card_delete":
+                temp_ministone = deck_ministone[i[3]]
+                for j in temp_ministone:
+                    n_temp_position = tuple([temp_position[k] + j[0][k] for k in range(2)])
+                    screen.blit(j[1], n_temp_position)
+
+
+class ListFuncQueue(list):
+    def w_append(self, func, args: tuple, duration: int):
+        self.append([func, args, duration * animation_delay])
+
+    def run_check(self):
+        for i in self:
+            if not i[-1]:
+                i[0](i[1])
+            else:
+                i[-1] -= 1
+
 
 ########################################################################################################################
-
-pygame.init()
 
 window_size = [1024, 600]
 screen = pygame.display.set_mode(window_size)
@@ -633,7 +728,7 @@ screen = pygame.display.set_mode(window_size)
 title = "PolyGomino"
 pygame.display.set_caption(title)
 
-fps = 15
+fps = 10
 frame = 0
 animation_delay = 1
 run = 1
@@ -655,6 +750,8 @@ deck_selected = 0  # 1,2,3 / 0 : not selected
 current_block_shape = []  # [] : not selected
 current_block_position = []  # row, column / [] : not selected
 num_var = {"score": 0, "turn": 0}
+
+# func_queue = ListFuncQueue()
 
 with open('difficulty.json') as f:
     json_object = json.load(f)
@@ -700,13 +797,10 @@ button_turnright.event_call("button_turnright_stand", None)
 
 cards = AnimatedSprite((28, 39), (61, 111), 3, ".\\resources\\cards")
 cards.add_positioned_animation("card_picked", "card_non_picked", [[0, 8]])
-cards.add_positioned_animation("card_picked", "card_pickup", [[0, 1]])
-cards.add_positioned_animation("card_picked", "card_pickdown", [[0, 7]])
+cards.add_positioned_animation("card_picked", "card_pickup", [[0, 1], [0, 0]])
+cards.add_positioned_animation("card_picked", "card_pickdown", [[0, 7], [0, 8]])
 cards.add_positioned_animation("card_picked", "card_emerge",
                                [[0, 40], [0, 40], [0, 28], [0, 18], [0, 13], [0, 10]])
-
-for card_num in range(3):
-    cards.event_call("card_emerge", "card_non_picked", card_num)
 
 numbers = AnimatedSprite((7, 11), (212, 6), 4, ".\\resources\\numbers")
 
@@ -721,20 +815,40 @@ numbers.add_positioned_animation("number_7", "number_7_scoreup", [[0, -2], [0, -
 numbers.add_positioned_animation("number_8", "number_8_scoreup", [[0, -2], [0, -1]])
 numbers.add_positioned_animation("number_9", "number_9_scoreup", [[0, -2], [0, -1]])
 
-for inumpos in range(2):
-    for jnumpos in range(5):
-        numbers.event_call("number_0_scoreup", "number_0", [inumpos, jnumpos])
-
 stones = AnimatedSprite((18, 23), (57, 1), 1, ".\\resources\\stones")
 selections = AnimatedSprite((22, 22), (55, 4), 2,
                             ".\\resources\\selections\\selection_blue",
                             ".\\resources\\selections\\selection_red")
 
 asp_list = [button_place, button_down, button_up, button_left, button_right, button_flipfront, button_flipside,
-            button_turnleft, button_turnright, cards, numbers, stones][::-1]
+            button_turnleft, button_turnright, cards, numbers, stones, selections][::-1]
 
 main_ui = pygame.image.load(".\\resources\\basic_gui.png").convert_alpha()
 
+ministone_preset = {(1, 1): (9, 12), (2, 2): (6, 9), (2, 1): (9, 7), (3, 3): (5, 8),
+                    (3, 2): (6, 5), (3, 1): (10, 5), (4, 4): (4, 7), (4, 3): (5, 5),
+                    (4, 2): (8, 5), (4, 1): (11, 5), (5, 5): (4, 7), (5, 4): (4, 5),
+                    (5, 3): (6, 5), (5, 2): (9, 5), (5, 1): (11, 5), (6, 5): (4, 5),
+                    (6, 4): (6, 5), (6, 3): (8, 5), (6, 2): (10, 5), (6, 1): (12, 5)}
+ministone_images = [[pygame.image.load(".\\resources\\ministones\\ministone_verybig.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_verybig.png").convert_alpha()],
+                    [pygame.image.load(".\\resources\\ministones\\ministone_big_empty.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_big.png").convert_alpha()],
+                    [pygame.image.load(".\\resources\\ministones\\ministone_medium_empty.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_medium.png").convert_alpha()],
+                    [pygame.image.load(".\\resources\\ministones\\ministone_small_empty.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_small.png").convert_alpha()],
+                    [pygame.image.load(".\\resources\\ministones\\ministone_verysmall_empty.png").convert_alpha(),
+                     pygame.image.load(".\\resources\\ministones\\ministone_verysmall.png").convert_alpha()]][::-1]
+ministone_size_pixel = [3, 4, 5, 7, 9]
+
+for card_num in range(3):
+    block_pick(card_num + 1)
+    cards.event_call("card_emerge", "card_non_picked", card_num)
+
+for inumpos in range(2):
+    for jnumpos in range(5):
+        numbers.event_call("number_0_scoreup", "number_0", [inumpos, jnumpos])
 
 ########################################################################################################################
 
@@ -752,6 +866,8 @@ def main_loop():
 
         pygame.display.flip()
 
+        # events = pygame.event.get()
+        # pygame.event.clear()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -763,7 +879,8 @@ def main_loop():
 
                     if event.key == pygame.K_RETURN:
                         if block_drop():
-                            block_delete_check()
+                            num_var["turn"] += 1
+                            number_call(1, (2 * block_delete_check() + 3) * animation_delay)
                     if event.key == pygame.K_DOWN:
                         block_move_down()
                     if event.key == pygame.K_UP:
@@ -778,7 +895,7 @@ def main_loop():
                         block_flip_side()
                     if event.key == pygame.K_SEMICOLON:
                         block_turn_left()
-                    if event.key == pygame.K_QUOTEDBL:
+                    if event.key == pygame.K_QUOTE:
                         block_turn_right()
                     if event.key == pygame.K_1 or event.key == pygame.K_KP1:
                         if not deck_selected:
@@ -790,11 +907,26 @@ def main_loop():
                                 block_unload()
                                 block_load(1)
                     if event.key == pygame.K_2 or event.key == pygame.K_KP2:
-                        pass
+                        if not deck_selected:
+                            block_load(2)
+                        else:
+                            if deck_selected == 2:
+                                block_unload()
+                            else:
+                                block_unload()
+                                block_load(2)
                     if event.key == pygame.K_3 or event.key == pygame.K_KP3:
-                        pass
+                        if not deck_selected:
+                            block_load(3)
+                        else:
+                            if deck_selected == 3:
+                                block_unload()
+                            else:
+                                block_unload()
+                                block_load(3)
                     if event.key == pygame.K_r:
-                        pass
+                        print(current_block_shape, current_block_position)
+                        print(cards.queue, "\n\n", stones.queue)
 
                 if event.type == pygame.KEYUP:
 
