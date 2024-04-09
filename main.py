@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # PolyGomino by in_zet
-# 2024/3/22 ~
+# 2024/03/22 ~
+# 2024/04/08 v0.1.0
 
 import sys
 import pygame
