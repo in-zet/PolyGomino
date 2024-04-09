@@ -422,37 +422,41 @@ def block_delete(block_delete_target, delay):
     for i in block_delete_target:
         isoverlap = 0
 
-        for j in stones.queue:
-            if i in j:
-                if j[2] == "stone_delete":
-                    stones.event_call(None, "stone_delete", i,
-                                      force_duration=(2 * delay + 2) * animation_delay, isappend=True, isinsert=True)
+        for j in range(len(stones.queue)):
+            if i in stones.queue[j]:
+                # if stones.queue[j][2] == "stone_delete":
+                #     stones.event_call(None, [["stone_stand", (2 * delay - 4)], None],
+                #                       i, force_duration=4, isappend=True)
+
+                if stones.queue[j][0] == "stone_fall" and stones.queue[j][2]:
+                    stones.queue[j][2] = None
+                    if delay - 1:
+                        stones.event_call(None, [["stone_stand", (2 * delay - 2)], "stone_delete"], i,
+                                          force_duration=4, isappend=True)
+                    else:
+                        stones.event_call(None, "stone_delete", i,
+                                          force_duration=4, isappend=True)
+
                     isoverlap = 1
                     break
 
-                elif j[0] == "stone_fall":
-                    j[2] = None
+                elif stones.queue[j][0] != "stone_fall" and stones.queue[j][1] != -1:
                     stones.event_call(None, "stone_delete", i,
-                                      force_duration=(2 * delay + 2) * animation_delay, isappend=True, isinsert=True)
-                    isoverlap = 1
-                    break
+                                      force_duration=(2 * delay + 2), isappend=True)
 
-                elif j[1] != -1:
-                    stones.event_call("stone_stand", "stone_delete", i,
-                                      force_duration=(2 * delay + 2) * animation_delay, isappend=True, isinsert=True)
                     isoverlap = 1
                     break
 
         if not isoverlap:
             stones.event_call("stone_stand", "stone_delete", i,
-                              force_duration=2 * delay + 2 * animation_delay, isinsert=True)
+                              force_duration=(2 * delay + 2))
 
     num_var["score"] += 10 * len(block_delete_target)
     if delay == 1:
-        number_call(0, (2 * delay + 2) * animation_delay, isclear=True, noappend=True)
+        number_call(0, (2 * delay + 2), isclear=True, noappend=True)
 
     else:
-        number_call(0, (2 * delay + 2) * animation_delay, isclear=True)
+        number_call(0, (2 * delay + 2), isclear=True)
 
 
 def block_pick(slot: int):
@@ -605,30 +609,30 @@ class AnimatedSprite:
         self.init_pos = init_pos
 
         for directory in directorys:
-            temp_file_list = list(filter(os.path.isfile, [f'{directory}\\{i}' for i in os.listdir(directory)]))
-            folder_list = list(filter(os.path.isdir, [f'{directory}\\{i}' for i in os.listdir(directory)]))
+            temp_file_list = list(filter(os.path.isfile, [f'{directory}/{i}' for i in os.listdir(directory)]))
+            folder_list = list(filter(os.path.isdir, [f'{directory}/{i}' for i in os.listdir(directory)]))
             for i in temp_file_list:
-                self.images[i.split("\\")[-1].split(".")[0]] = pygame.image.load(i).convert_alpha()
+                self.images[i.split("/")[-1].split(".")[0]] = pygame.image.load(i).convert_alpha()
 
             for i in folder_list:
-                temp_file_list = sorted(list(filter(os.path.isfile, [f'{i}\\{j}' for j in os.listdir(i)])))
-                self.images[i.split("\\")[-1]] = [pygame.image.load(j).convert_alpha() for j in temp_file_list]
+                temp_file_list = sorted(list(filter(os.path.isfile, [f'{i}/{j}' for j in os.listdir(i)])))
+                self.images[i.split("/")[-1]] = [pygame.image.load(j).convert_alpha() for j in temp_file_list]
 
     # def add_animation(self, directory: str, name: str):
     #     file_list = sorted(list(filter(os.path.isfile, os.listdir(directory))))
     #     self.images[name] \
-    #         = [pygame.image.load(f'{directory}\\{file_list[i]}').convert_alpha() for i in range(len(file_list))]
+    #         = [pygame.image.load(f'{directory}/{file_list[i]}').convert_alpha() for i in range(len(file_list))]
     #
     # def add_images(self, directory: str):
     #     file_list = list(filter(os.path.isfile, os.listdir(directory)))
     #     for i in file_list:
-    #         self.images[i.split(".")[0]] = pygame.image.load(f'{directory}\\{i}').convert_alpha()
+    #         self.images[i.split(".")[0]] = pygame.image.load(f'{directory}/{i}').convert_alpha()
 
     def add_positioned_animation(self, target_image: str, name: str, position: list[list[int]]):
         self.images[name] \
             = position + [self.images[target_image], "PA"]
 
-    def event_call(self, current_event: str | None, next_event: str | None | list[str],
+    def event_call(self, current_event: str | None, next_event: str | None | list[list | str | None],
                    position: list[int] | int = [0, 0], isappend: bool = False, force_duration: int = 0,
                    isinsert: bool = False):
 
@@ -707,11 +711,16 @@ class AnimatedSprite:
             if tmp_queue[i][1] == 0:
                 if tmp_queue[i][2]:
                     if isinstance(tmp_queue[i][2], list):
-                        self.event_call(tmp_queue[i][2][0], tmp_queue[i][2][1:],
-                                        tmp_queue[i][3], isappend=True)
+                        if isinstance(tmp_queue[i][2][0], list):
+                            self.event_call(tmp_queue[i][2][0][0], tmp_queue[i][2][1:],
+                                            tmp_queue[i][3],
+                                            isappend=True, force_duration=tmp_queue[i][2][0][1])
+                        else:
+                            self.event_call(tmp_queue[i][2][0], tmp_queue[i][2][1:],
+                                            tmp_queue[i][3], isappend=True)
                     else:
                         self.event_call(tmp_queue[i][2], None,
-                                        tmp_queue[i][3],isappend=True)
+                                        tmp_queue[i][3], isappend=True)
 
         it = 0
         it_obj = len(self.queue)
@@ -784,9 +793,9 @@ screen = pygame.display.set_mode(window_size)
 title = "PolyGomino"
 pygame.display.set_caption(title)
 
-fps = 15
+fps = 30
 frame = 0
-animation_delay = 1
+animation_delay = 3
 run = 1
 
 cannot_operate = 0
@@ -816,49 +825,49 @@ inflection = json_object['inflection']
 difficulties = json_object['difficulties']
 
 button_place = AnimatedSprite((80, 20), (168, 128), 0,
-                              ".\\resources\\buttons\\button_place")
+                              "resources/buttons/button_place")
 button_place.event_call("button_place_stand", None)
 
 button_down = AnimatedSprite((38, 24), (189, 102), 0,
-                             ".\\resources\\buttons\\button_down")
+                             "resources/buttons/button_down")
 button_down.event_call("button_down_stand", None)
 
 button_up = AnimatedSprite((38, 24), (189, 80), 0,
-                           ".\\resources\\buttons\\button_up")
+                           "resources/buttons/button_up")
 button_up.event_call("button_up_stand", None)
 
 button_left = AnimatedSprite((20, 46), (168, 80), 0,
-                             ".\\resources\\buttons\\button_left")
+                             "resources/buttons/button_left")
 button_left.event_call("button_left_stand", None)
 
 button_right = AnimatedSprite((20, 46), (228, 80), 0,
-                              ".\\resources\\buttons\\button_right")
+                              "resources/buttons/button_right")
 button_right.event_call("button_right_stand", None)
 
 button_flipfront = AnimatedSprite((40, 20), (167, 58), 0,
-                                  ".\\resources\\buttons\\button_flipfront")
+                                  "resources/buttons/button_flipfront")
 button_flipfront.event_call("button_flipfront_stand", None)
 
 button_flipside = AnimatedSprite((40, 20), (209, 58), 0,
-                                 ".\\resources\\buttons\\button_flipside")
+                                 "resources/buttons/button_flipside")
 button_flipside.event_call("button_flipside_stand", None)
 
 button_turnleft = AnimatedSprite((40, 20), (167, 40), 0,
-                                 ".\\resources\\buttons\\button_turnleft")
+                                 "resources/buttons/button_turnleft")
 button_turnleft.event_call("button_turnleft_stand", None)
 
 button_turnright = AnimatedSprite((40, 20), (209, 40), 0,
-                                  ".\\resources\\buttons\\button_turnright")
+                                  "resources/buttons/button_turnright")
 button_turnright.event_call("button_turnright_stand", None)
 
-cards = AnimatedSprite((28, 39), (61, 111), 3, ".\\resources\\cards")
+cards = AnimatedSprite((28, 39), (61, 111), 3, "resources/cards")
 cards.add_positioned_animation("card_picked", "card_non_picked", [[0, 8]])
 cards.add_positioned_animation("card_picked", "card_pickup", [[0, 1], [0, 0]])
 cards.add_positioned_animation("card_picked", "card_pickdown", [[0, 7], [0, 8]])
 cards.add_positioned_animation("card_picked", "card_emerge",
                                [[0, 40], [0, 40], [0, 28], [0, 18], [0, 13], [0, 10]])
 
-numbers = AnimatedSprite((7, 11), (212, 6), 4, ".\\resources\\numbers")
+numbers = AnimatedSprite((7, 11), (212, 6), 4, "resources/numbers")
 
 numbers.add_positioned_animation("number_0", "number_0_scoreup", [[0, -2], [0, -1]])
 numbers.add_positioned_animation("number_1", "number_1_scoreup", [[0, -2], [0, -1]])
@@ -871,31 +880,31 @@ numbers.add_positioned_animation("number_7", "number_7_scoreup", [[0, -2], [0, -
 numbers.add_positioned_animation("number_8", "number_8_scoreup", [[0, -2], [0, -1]])
 numbers.add_positioned_animation("number_9", "number_9_scoreup", [[0, -2], [0, -1]])
 
-stones = AnimatedSprite((18, 23), (57, 1), 1, ".\\resources\\stones")
+stones = AnimatedSprite((18, 23), (57, 1), 1, "resources/stones")
 selections = AnimatedSprite((22, 22), (55, 4), 2,
-                            ".\\resources\\selections\\selection_blue",
-                            ".\\resources\\selections\\selection_red")
+                            "resources/selections/selection_blue",
+                            "resources/selections/selection_red")
 
 asp_list = [button_place, button_down, button_up, button_left, button_right, button_flipfront, button_flipside,
             button_turnleft, button_turnright, cards, numbers, stones, selections][::-1]
 
-main_ui = pygame.image.load(".\\resources\\basic_gui.png").convert_alpha()
+main_ui = pygame.image.load("resources/basic_gui.png").convert_alpha()
 
 ministone_preset = {(1, 1): (9, 12), (2, 2): (6, 9), (2, 1): (9, 7), (3, 3): (5, 8),
                     (3, 2): (6, 5), (3, 1): (10, 5), (4, 4): (4, 7), (4, 3): (5, 5),
                     (4, 2): (8, 5), (4, 1): (11, 5), (5, 5): (4, 7), (5, 4): (4, 5),
                     (5, 3): (6, 5), (5, 2): (9, 5), (5, 1): (11, 5), (6, 5): (4, 5),
                     (6, 4): (6, 5), (6, 3): (8, 5), (6, 2): (10, 5), (6, 1): (12, 5)}
-ministone_images = [[pygame.image.load(".\\resources\\ministones\\ministone_verybig.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_verybig.png").convert_alpha()],
-                    [pygame.image.load(".\\resources\\ministones\\ministone_big_empty.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_big.png").convert_alpha()],
-                    [pygame.image.load(".\\resources\\ministones\\ministone_medium_empty.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_medium.png").convert_alpha()],
-                    [pygame.image.load(".\\resources\\ministones\\ministone_small_empty.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_small.png").convert_alpha()],
-                    [pygame.image.load(".\\resources\\ministones\\ministone_verysmall_empty.png").convert_alpha(),
-                     pygame.image.load(".\\resources\\ministones\\ministone_verysmall.png").convert_alpha()]][::-1]
+ministone_images = [[pygame.image.load("resources/ministones/ministone_verybig.png").convert_alpha(),
+                     pygame.image.load("resources/ministones/ministone_verybig.png").convert_alpha()],
+                    [pygame.image.load("resources/ministones/ministone_big_empty.png").convert_alpha(),
+                     pygame.image.load("resources/ministones/ministone_big.png").convert_alpha()],
+                    [pygame.image.load("resources/ministones/ministone_medium_empty.png").convert_alpha(),
+                     pygame.image.load("resources/ministones/ministone_medium.png").convert_alpha()],
+                    [pygame.image.load("resources/ministones/ministone_small_empty.png").convert_alpha(),
+                     pygame.image.load("resources/ministones/ministone_small.png").convert_alpha()],
+                    [pygame.image.load("resources/ministones/ministone_verysmall_empty.png").convert_alpha(),
+                     pygame.image.load("resources/ministones/ministone_verysmall.png").convert_alpha()]][::-1]
 ministone_size_pixel = [3, 4, 5, 7, 9]
 
 for card_num in range(3):
@@ -928,6 +937,10 @@ def main_loop():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
 
             if not cannot_operate:
 
@@ -1008,12 +1021,6 @@ def main_loop():
                     if event.key == pygame.K_QUOTE:
                         button_turnright.event_call("button_turnright_detach",
                                                     "button_turnright_stand")
-                    if event.key == pygame.K_1 or event.key == pygame.K_KP1:
-                        pass
-                    if event.key == pygame.K_2 or event.key == pygame.K_KP2:
-                        pass
-                    if event.key == pygame.K_3 or event.key == pygame.K_KP3:
-                        pass
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     pass
@@ -1024,4 +1031,5 @@ def main_loop():
             cannot_operate -= 1
 
 
-main_loop()
+if __name__ == "__main__":
+    main_loop()
