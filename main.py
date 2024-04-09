@@ -12,6 +12,7 @@ from pygame.locals import *
 import random
 import time
 import copy
+import traceback
 
 
 pygame.init()
@@ -994,8 +995,16 @@ def main_loop():
                                 block_unload()
                                 block_load(3)
                     if event.key == pygame.K_r:
-                        print(current_block_shape, current_block_position)
-                        print(cards.queue, "\n\n", stones.queue)
+                        command = 'print("DEVCONSOLE")'
+
+                        while command != "OUT":
+                            try:
+                                eval(command)
+                            except Exception:
+                                traceback.print_exc()
+                                time.sleep(0.1)
+
+                            command = input(">>> ")
 
                 if event.type == pygame.KEYUP:
 
