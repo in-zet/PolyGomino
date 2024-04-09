@@ -31,7 +31,7 @@ Gameplay
 ```.```, ```/``` to flip stones frontward or sideward. \
 Use ```Arrow Keys``` to move stones. \
 Use ```Enter Key``` to place stones. \
-Place stones to bo 5 or 6 in a row (or column or diagonal), and the stone disappears and score increases. \
+Place stones to be 5 or 6 in a row (or column or diagonal), and the stone disappears and score increases. \
 Try to achieve the score as high as you can!
 
 
@@ -46,5 +46,6 @@ Features
 
 Version
 ------------------------
-Recent Version : v0.1.0 (Released on 24 April 8th)
+**v0.1.1** _(Released on 24 April 10th)_ \
+**v0.1.0** _(Released on 24 April 8th)_
 
