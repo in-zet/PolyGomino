@@ -47,6 +47,6 @@ Features
 
 Version
 ------------------------
-[**v0.1.1**]{https://github.com/in-zet/PolyGomino/releases/tag/v0.1.1} _(Released on 24 April 10th)_ \
-[**v0.1.0**]{https://github.com/in-zet/PolyGomino/releases/tag/v0.1.0} _(Released on 24 April 8th)_
+[**v0.1.1**](https://github.com/in-zet/PolyGomino/releases/tag/v0.1.1) _(Released on 24 April 10th)_ \
+[**v0.1.0**](https://github.com/in-zet/PolyGomino/releases/tag/v0.1.0) _(Released on 24 April 8th)_
 
